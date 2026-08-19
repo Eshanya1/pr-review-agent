@@ -2,6 +2,9 @@
 
 ![demo: pr-review-agent eval running with zero setup](assets/demo.gif)
 
+[![Launch in your browser](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/Eshanya1/pr-review-agent/main?urlpath=terminal)
+— no install, opens a real terminal with the tool already set up. Run `pr-review-agent eval` once it loads (takes ~1-2 min to build the first time).
+
 A multi-agent system that reviews pull request diffs for security and
 correctness bugs — with a **critic pass** that cross-checks every claim
 against the actual diff before deciding whether a human needs to look at it.
@@ -12,7 +15,7 @@ through the real critic/verification/escalation logic and prints
 precision/recall/F1 on the spot.
 
 ```bash
-git clone https://github.com/<your-username>/pr-review-agent.git
+git clone https://github.com/Eshanya1/pr-review-agent.git
 cd pr-review-agent
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
@@ -107,6 +110,57 @@ measure:
 
 Run `pr-review-agent eval --live` with `ANTHROPIC_API_KEY` set to regenerate
 these against a live model instead of the recorded cassettes.
+
+## Eval results (live run, real Claude API, `temperature=0`)
+
+```
+$ pr-review-agent eval --live
+fixtures             15
+true_positives       11
+false_negatives      0
+false_positives      2
+precision            0.846
+recall               1.0
+f1                   0.917
+escalation_accuracy  1.0
+auto_approve_rate    0.467
+```
+
+The live model actually outperforms the recorded cassette above — it caught
+both bugs (`off_by_one_loop`, `session_expiry`'s exact evidence) that the
+hand-authored cassette was scripted to miss. That's expected: the cassette
+exists for reproducibility, not to flatter the system.
+
+The 2 false positives here are the more interesting result, and both are
+genuine, not fabricated for the demo:
+
+- **`clean_formatting_helpers`** flagged `dollars = cents / 100` as
+  "integer division that truncates cents" — which is simply wrong in
+  Python 3 (`/` is float division; that's what `//` is for). A confident,
+  well-quoted, factually incorrect claim about language semantics — exactly
+  the class of error the critic *can't* catch, because the evidence is real
+  and verifiable, only the reasoning about it is wrong.
+- **`clean_pagination_fix`** got flagged again, this time for
+  `start = page * page_size` being "off-by-one if page is 1-indexed" —
+  speculative, and wrong for the code as written (0-indexed pages are
+  standard), but not an unreasonable thing to ask a human to double-check.
+
+**One fixture actually caught a real bug in the eval set itself.** The
+first live run (before `temperature=0` was pinned) flagged
+`clean_formatting_helpers`'s original `truncate()` implementation —
+`text[:max_len - 1] + "..."` — for producing strings *longer* than
+`max_len` (`(max_len-1)+3 = max_len+2`). That fixture was supposed to be
+clean; it wasn't. The bug is fixed in `scripts/generate_fixtures.py` now
+(`max_len - 3` instead of `max_len - 1`). Left as a note here rather than
+memory-holed, because it's a fair example of the kind of mistake this tool
+is meant to catch — including, apparently, in its own test data.
+
+Also worth being upfront about: live runs are **not perfectly
+reproducible** run-to-run even at `temperature=0` (API-level nondeterminism
+across requests is a known Claude/GPT behavior). Two consecutive runs above
+landed on identical numbers, but don't expect bit-for-bit identical findings
+every time — which is exactly why the cassette-based eval, not the live
+one, is what CI checks on every push.
 
 ## Bug classes covered by the eval set
 

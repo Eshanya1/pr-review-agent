@@ -82,6 +82,7 @@ class AnthropicBackend:
         message = self.client.messages.create(
             model=self.model,
             max_tokens=2048,
+            temperature=0,  # reviewer output should be reproducible, not creative
             system=SYSTEM_PROMPT,
             messages=[{"role": "user", "content": f"Review this diff:\n\n{diff_text}"}],
         )

@@ -324,7 +324,7 @@ def format_currency(cents: int) -> str:
 def truncate(text: str, max_len: int = 100) -> str:
     if len(text) <= max_len:
         return text
-    return text[: max_len - 1] + "..."
+    return text[: max_len - 3] + "..."
 '''
 add_fixture("clean_formatting_helpers", "app/utils/formatting.py", code, True, [], None, [])
 
