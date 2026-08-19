@@ -1,0 +1,12 @@
+{
+  "findings": [
+    {
+      "category": "sql_injection",
+      "severity": "critical",
+      "file": "app/api/search.py",
+      "line": 8,
+      "summary": "User-controlled `query` is concatenated directly into a SQL string, allowing SQL injection via the /api/users/search endpoint.",
+      "evidence": "    sql = \"SELECT id, name, email FROM users WHERE name LIKE '%\" + query + \"%'\""
+    }
+  ]
+}

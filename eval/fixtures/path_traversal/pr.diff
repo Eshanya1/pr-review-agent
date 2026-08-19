@@ -1,0 +1,15 @@
+diff --git a/app/api/files.py b/app/api/files.py
+new file mode 100644
+index 0000000..0000000
+--- /dev/null
++++ b/app/api/files.py
+@@ -0,0 +1,9 @@
++import os
++
++UPLOAD_DIR = "/var/app/uploads"
++
++
++def download_file(filename: str):
++    path = os.path.join(UPLOAD_DIR, filename)
++    with open(path, "rb") as f:
++        return f.read()

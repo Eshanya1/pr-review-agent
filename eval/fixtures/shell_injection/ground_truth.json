@@ -1,0 +1,7 @@
+{
+  "clean": false,
+  "categories": [
+    "shell_injection"
+  ],
+  "severity": "critical"
+}

@@ -1,0 +1,7 @@
+{
+  "clean": false,
+  "categories": [
+    "insecure_deserialization"
+  ],
+  "severity": "critical"
+}

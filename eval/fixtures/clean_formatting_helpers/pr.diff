@@ -1,0 +1,15 @@
+diff --git a/app/utils/formatting.py b/app/utils/formatting.py
+new file mode 100644
+index 0000000..0000000
+--- /dev/null
++++ b/app/utils/formatting.py
+@@ -0,0 +1,9 @@
++def format_currency(cents: int) -> str:
++    dollars = cents / 100
++    return f"${dollars:,.2f}"
++
++
++def truncate(text: str, max_len: int = 100) -> str:
++    if len(text) <= max_len:
++        return text
++    return text[: max_len - 1] + "..."

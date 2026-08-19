@@ -1,0 +1,12 @@
+{
+  "findings": [
+    {
+      "category": "shell_injection",
+      "severity": "critical",
+      "file": "app/tools/convert.py",
+      "line": 5,
+      "summary": "input_path/output_path are interpolated directly into a shell command, allowing command injection via a crafted filename.",
+      "evidence": "    os.system(f\"libreoffice --headless --convert-to pdf --outdir {output_path} {input_path}\")"
+    }
+  ]
+}

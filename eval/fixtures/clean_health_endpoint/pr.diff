@@ -1,0 +1,14 @@
+diff --git a/app/api/health.py b/app/api/health.py
+new file mode 100644
+index 0000000..0000000
+--- /dev/null
++++ b/app/api/health.py
+@@ -0,0 +1,8 @@
++from flask import Blueprint, jsonify
++
++bp = Blueprint("health", __name__)
++
++
++@bp.route("/health")
++def health_check():
++    return jsonify({"status": "ok"})

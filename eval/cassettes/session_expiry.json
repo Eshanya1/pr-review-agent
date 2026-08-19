@@ -1,0 +1,12 @@
+{
+  "findings": [
+    {
+      "category": "session_expiry",
+      "severity": "high",
+      "file": "app/auth/sessions.py",
+      "line": 13,
+      "summary": "is_session_valid() only checks membership and never compares created_at against a TTL, so sessions never expire.",
+      "evidence": "return token in SESSIONS_STORE  # no expiry check"
+    }
+  ]
+}

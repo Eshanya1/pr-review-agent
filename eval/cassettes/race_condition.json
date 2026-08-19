@@ -1,0 +1,12 @@
+{
+  "findings": [
+    {
+      "category": "race_condition",
+      "severity": "high",
+      "file": "app/inventory/stock.py",
+      "line": 2,
+      "summary": "Read-then-write on stock with no lock or transaction lets two concurrent requests both pass the check and oversell inventory.",
+      "evidence": "    current = get_stock(item_id)"
+    }
+  ]
+}

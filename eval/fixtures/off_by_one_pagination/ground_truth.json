@@ -1,0 +1,7 @@
+{
+  "clean": false,
+  "categories": [
+    "off_by_one"
+  ],
+  "severity": "medium"
+}

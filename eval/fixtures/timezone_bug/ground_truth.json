@@ -1,0 +1,7 @@
+{
+  "clean": false,
+  "categories": [
+    "timezone_bug"
+  ],
+  "severity": "medium"
+}

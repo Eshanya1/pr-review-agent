@@ -1,0 +1,12 @@
+{
+  "findings": [
+    {
+      "category": "timezone_bug",
+      "severity": "medium",
+      "file": "app/billing/invoices.py",
+      "line": 5,
+      "summary": "datetime.now() returns naive local time; comparing it against a UTC due_date will misjudge overdue status depending on server timezone.",
+      "evidence": "    return datetime.now() > due_date"
+    }
+  ]
+}

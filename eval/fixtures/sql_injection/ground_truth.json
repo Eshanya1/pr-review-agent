@@ -1,0 +1,7 @@
+{
+  "clean": false,
+  "categories": [
+    "sql_injection"
+  ],
+  "severity": "critical"
+}

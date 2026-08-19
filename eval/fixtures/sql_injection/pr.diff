@@ -1,0 +1,22 @@
+diff --git a/app/api/search.py b/app/api/search.py
+new file mode 100644
+index 0000000..0000000
+--- /dev/null
++++ b/app/api/search.py
+@@ -0,0 +1,16 @@
++from flask import request
++from app.db import get_connection
++
++
++def search_users(query: str):
++    conn = get_connection()
++    cursor = conn.cursor()
++    sql = "SELECT id, name, email FROM users WHERE name LIKE '%" + query + "%'"
++    cursor.execute(sql)
++    return cursor.fetchall()
++
++
++@app.route("/api/users/search")
++def search_endpoint():
++    query = request.args.get("q", "")
++    return {"results": search_users(query)}

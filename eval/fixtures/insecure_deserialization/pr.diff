@@ -1,0 +1,16 @@
+diff --git a/app/jobs/worker.py b/app/jobs/worker.py
+new file mode 100644
+index 0000000..0000000
+--- /dev/null
++++ b/app/jobs/worker.py
+@@ -0,0 +1,10 @@
++import pickle
++import redis
++
++r = redis.Redis()
++
++
++def process_job(job_id: str):
++    raw = r.get(f"job:{job_id}")
++    job = pickle.loads(raw)
++    return job.run()

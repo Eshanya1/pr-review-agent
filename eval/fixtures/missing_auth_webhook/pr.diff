@@ -1,0 +1,17 @@
+diff --git a/app/api/webhooks.py b/app/api/webhooks.py
+new file mode 100644
+index 0000000..0000000
+--- /dev/null
++++ b/app/api/webhooks.py
+@@ -0,0 +1,11 @@
++from flask import Blueprint, request
++
++bp = Blueprint("webhooks", __name__)
++
++
++@bp.route("/webhooks/stripe/refund", methods=["POST"])
++def stripe_refund():
++    payload = request.get_json()
++    order_id = payload["order_id"]
++    process_refund(order_id, payload["amount"])
++    return {"status": "ok"}

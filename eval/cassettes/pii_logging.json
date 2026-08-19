@@ -1,0 +1,12 @@
+{
+  "findings": [
+    {
+      "category": "pii_logging",
+      "severity": "high",
+      "file": "app/middleware/logging.py",
+      "line": 7,
+      "summary": "Logging the user's SSN and phone number in plaintext puts regulated PII into log storage/aggregators.",
+      "evidence": "    logger.info(f\"New signup: email={user.email} ssn={user.ssn} phone={user.phone}\")"
+    }
+  ]
+}

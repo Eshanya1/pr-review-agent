@@ -1,0 +1,7 @@
+{
+  "clean": false,
+  "categories": [
+    "missing_auth"
+  ],
+  "severity": "critical"
+}

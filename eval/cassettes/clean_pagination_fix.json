@@ -1,0 +1,12 @@
+{
+  "findings": [
+    {
+      "category": "off_by_one",
+      "severity": "low",
+      "file": "app/api/pagination_v2.py",
+      "line": 8,
+      "summary": "Unusual ceiling-division expression for page count -- worth a second look.",
+      "evidence": "    return (total_items + page_size - 1) // page_size"
+    }
+  ]
+}

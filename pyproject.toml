@@ -1,0 +1,30 @@
+[project]
+name = "pr-review-agent"
+version = "0.1.0"
+description = "A multi-agent system that reviews GitHub pull requests for security and correctness bugs, with a critic pass to suppress hallucinated findings and an eval harness with precision/recall metrics."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Eshanya Marathe" }]
+dependencies = [
+    "anthropic>=0.40.0",
+    "click>=8.1",
+    "pydantic>=2.6",
+    "unidiff>=0.7.5",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-cov>=5.0"]
+
+[project.scripts]
+pr-review-agent = "pr_review_agent.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

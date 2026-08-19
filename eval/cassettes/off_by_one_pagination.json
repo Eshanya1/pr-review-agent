@@ -1,0 +1,12 @@
+{
+  "findings": [
+    {
+      "category": "off_by_one",
+      "severity": "medium",
+      "file": "app/api/pagination.py",
+      "line": 4,
+      "summary": "Slicing `items[start:end + 1]` returns page_size + 1 items instead of page_size, leaking one row from the next page.",
+      "evidence": "    return items[start:end + 1]"
+    }
+  ]
+}

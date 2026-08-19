@@ -1,0 +1,11 @@
+diff --git a/app/tools/convert.py b/app/tools/convert.py
+new file mode 100644
+index 0000000..0000000
+--- /dev/null
++++ b/app/tools/convert.py
+@@ -0,0 +1,5 @@
++import os
++
++
++def convert_to_pdf(input_path: str, output_path: str):
++    os.system(f"libreoffice --headless --convert-to pdf --outdir {output_path} {input_path}")

@@ -1,0 +1,18 @@
+diff --git a/app/utils/batching.py b/app/utils/batching.py
+new file mode 100644
+index 0000000..0000000
+--- /dev/null
++++ b/app/utils/batching.py
+@@ -0,0 +1,12 @@
++def chunk_ids(ids: list[int], batch_size: int):
++    batches = []
++    for i in range(0, len(ids), batch_size):
++        batches.append(ids[i:i + batch_size])
++    return batches
++
++
++def last_n_days(days: int):
++    result = []
++    for i in range(1, days):
++        result.append(i)
++    return result

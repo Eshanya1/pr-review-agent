@@ -1,0 +1,7 @@
+{
+  "clean": false,
+  "categories": [
+    "pii_logging"
+  ],
+  "severity": "high"
+}

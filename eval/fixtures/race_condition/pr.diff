@@ -1,0 +1,12 @@
+diff --git a/app/inventory/stock.py b/app/inventory/stock.py
+new file mode 100644
+index 0000000..0000000
+--- /dev/null
++++ b/app/inventory/stock.py
+@@ -0,0 +1,6 @@
++def reserve_stock(item_id: str, quantity: int) -> bool:
++    current = get_stock(item_id)
++    if current < quantity:
++        return False
++    set_stock(item_id, current - quantity)
++    return True

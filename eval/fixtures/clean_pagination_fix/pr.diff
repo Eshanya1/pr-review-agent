@@ -1,0 +1,14 @@
+diff --git a/app/api/pagination_v2.py b/app/api/pagination_v2.py
+new file mode 100644
+index 0000000..0000000
+--- /dev/null
++++ b/app/api/pagination_v2.py
+@@ -0,0 +1,8 @@
++def paginate(items, page: int, page_size: int = 20):
++    start = page * page_size
++    end = start + page_size
++    return items[start:end]
++
++
++def get_page_count(total_items: int, page_size: int = 20):
++    return (total_items + page_size - 1) // page_size

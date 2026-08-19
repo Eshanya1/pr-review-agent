@@ -1,0 +1,12 @@
+{
+  "findings": [
+    {
+      "category": "insecure_deserialization",
+      "severity": "critical",
+      "file": "app/jobs/worker.py",
+      "line": 9,
+      "summary": "pickle.loads() on data read from Redis lets anyone who can write to that key execute arbitrary code when the job runs.",
+      "evidence": "    job = pickle.loads(raw)"
+    }
+  ]
+}

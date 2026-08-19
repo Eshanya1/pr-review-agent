@@ -1,0 +1,14 @@
+diff --git a/app/middleware/logging.py b/app/middleware/logging.py
+new file mode 100644
+index 0000000..0000000
+--- /dev/null
++++ b/app/middleware/logging.py
+@@ -0,0 +1,8 @@
++import logging
++
++logger = logging.getLogger("requests")
++
++
++def log_signup(user):
++    logger.info(f"New signup: email={user.email} ssn={user.ssn} phone={user.phone}")
++    return user

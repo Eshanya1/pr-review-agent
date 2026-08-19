@@ -1,0 +1,12 @@
+{
+  "findings": [
+    {
+      "category": "other",
+      "severity": "high",
+      "file": "app/api/files.py",
+      "line": 7,
+      "summary": "filename is joined into UPLOAD_DIR without sanitization, so a value like '../../etc/passwd' escapes the upload directory.",
+      "evidence": "    path = os.path.join(UPLOAD_DIR, filename)"
+    }
+  ]
+}

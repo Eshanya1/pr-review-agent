@@ -1,0 +1,19 @@
+diff --git a/app/auth/sessions.py b/app/auth/sessions.py
+new file mode 100644
+index 0000000..0000000
+--- /dev/null
++++ b/app/auth/sessions.py
+@@ -0,0 +1,13 @@
++import time
++
++SESSIONS = {}
++
++
++def create_session(user_id: str) -> str:
++    token = generate_token()
++    SESSIONS[token] = {"user_id": user_id, "created_at": time.time()}
++    return token
++
++
++def is_session_valid(token: str) -> bool:
++    return token in SESSIONS

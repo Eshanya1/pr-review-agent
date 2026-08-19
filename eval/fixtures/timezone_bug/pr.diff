@@ -1,0 +1,16 @@
+diff --git a/app/billing/invoices.py b/app/billing/invoices.py
+new file mode 100644
+index 0000000..0000000
+--- /dev/null
++++ b/app/billing/invoices.py
+@@ -0,0 +1,10 @@
++from datetime import datetime
++
++
++def is_invoice_overdue(due_date: datetime) -> bool:
++    return datetime.now() > due_date
++
++
++def days_until_due(due_date: datetime) -> int:
++    delta = due_date - datetime.now()
++    return delta.days

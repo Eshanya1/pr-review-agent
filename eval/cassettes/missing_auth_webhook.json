@@ -1,0 +1,12 @@
+{
+  "findings": [
+    {
+      "category": "missing_auth",
+      "severity": "critical",
+      "file": "app/api/webhooks.py",
+      "line": 6,
+      "summary": "The refund webhook has no signature/auth check, so anyone who finds the URL can trigger refunds for arbitrary orders.",
+      "evidence": "@bp.route(\"/webhooks/stripe/refund\", methods=[\"POST\"])"
+    }
+  ]
+}
