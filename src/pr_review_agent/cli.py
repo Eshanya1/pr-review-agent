@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.resources
 import json
 from pathlib import Path
 
@@ -8,9 +9,9 @@ import click
 from .pipeline import build_backend, run_review
 from .scoring import build_report, score_fixture
 
-REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-DEFAULT_FIXTURES_DIR = REPO_ROOT / "eval" / "fixtures"
-DEFAULT_CASSETTE_DIR = REPO_ROOT / "eval" / "cassettes"
+_EVAL_DATA = importlib.resources.files("pr_review_agent") / "eval_data"
+DEFAULT_FIXTURES_DIR = Path(str(_EVAL_DATA / "fixtures"))
+DEFAULT_CASSETTE_DIR = Path(str(_EVAL_DATA / "cassettes"))
 
 
 @click.group()

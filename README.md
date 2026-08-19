@@ -67,7 +67,7 @@ flowchart LR
 - **Escalation policy** — only `high`/`critical` findings pull a human in;
   everything else auto-resolves. A finding that can't be verified is treated
   as high-risk by default, not discarded.
-- **Eval harness** (`scoring.py` + `eval/`) — 15 hand-built fixtures (11 buggy
+- **Eval harness** (`scoring.py` + `eval_data/`) — 15 hand-built fixtures (11 buggy
   across 9 bug classes, 4 clean) with ground-truth labels, scored for
   precision/recall/F1 and for whether the escalation decision itself was
   right.
@@ -215,9 +215,9 @@ src/pr_review_agent/
   scoring.py     precision/recall/F1 + escalation accuracy
   pipeline.py    wires reviewer -> critic -> result
   cli.py         `pr-review-agent review` / `pr-review-agent eval`
-eval/
-  fixtures/<id>/{pr.diff, ground_truth.json}
-  cassettes/<id>.json      recorded reviewer output for that fixture
+  eval_data/     packaged with the wheel (see pyproject.toml package-data) so
+    fixtures/<id>/{pr.diff, ground_truth.json}   eval works after a real `pip install`, not just an editable checkout
+    cassettes/<id>.json      recorded reviewer output for that fixture
 scripts/generate_fixtures.py   single source of truth for all of the above
 tests/           pytest suite for the parser, critic, and scorer
 ```

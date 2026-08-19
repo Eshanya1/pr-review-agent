@@ -26,5 +26,8 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+pr_review_agent = ["eval_data/fixtures/*/*", "eval_data/cassettes/*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

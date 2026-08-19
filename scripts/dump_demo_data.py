@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-FIXTURES_DIR = REPO_ROOT / "eval" / "fixtures"
+FIXTURES_DIR = REPO_ROOT / "src" / "pr_review_agent" / "eval_data" / "fixtures"
 
 import sys
 sys.path.insert(0, str(REPO_ROOT / "src"))

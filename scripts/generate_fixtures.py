@@ -14,8 +14,9 @@ import json
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-FIXTURES_DIR = REPO_ROOT / "eval" / "fixtures"
-CASSETTES_DIR = REPO_ROOT / "eval" / "cassettes"
+EVAL_DATA_DIR = REPO_ROOT / "src" / "pr_review_agent" / "eval_data"
+FIXTURES_DIR = EVAL_DATA_DIR / "fixtures"
+CASSETTES_DIR = EVAL_DATA_DIR / "cassettes"
 
 
 def make_diff(file_path: str, code: str) -> str:

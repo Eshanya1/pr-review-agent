@@ -16,11 +16,29 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install package
+      - name: Install package (editable)
         run: pip install -e ".[dev]"
 
       - name: Run tests
         run: pytest -q
+
+      - name: Run offline eval demo (no API key required)
+        run: pr-review-agent eval
+
+  regular-install-demo:
+    # Editable installs resolve package data relative to the checkout and can
+    # mask packaging bugs -- eval_data shipping correctly in a real `pip
+    # install` (what Binder/PyPI users actually get) is what this catches.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install package (non-editable)
+        run: pip install .
 
       - name: Run offline eval demo (no API key required)
         run: pr-review-agent eval
