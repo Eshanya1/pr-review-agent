@@ -7,14 +7,18 @@
 [![Launch in your browser](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/Eshanya1/pr-review-agent/main?urlpath=terminals/1)
 — for the real CLI in a real terminal instead: no install, opens a real terminal with the tool already set up. Run `pr-review-agent eval` once it loads (takes ~1-2 min to build the first time).
 
-A multi-agent system that reviews pull request diffs for security and
-correctness bugs — with a **critic pass** that cross-checks every claim
-against the actual diff before deciding whether a human needs to look at it.
+A multi-agent system with two capabilities over the same repo: **PR review**
+(reviewer agent → critic that verifies every claim against the diff →
+escalation policy) and **RAG Q&A** (ask natural-language questions about the
+codebase, answered only from retrieved chunks, cited). Both are wrapped in
+the same guardrails (structured-output validation, prompt-injection
+scanning) and the same self-built observability (latency, tokens,
+estimated cost per call — no external account needed).
 
-Zero setup to try it: no API key, no database, no infra. Clone it, install
-it, run `pr-review-agent eval`, and it replays 15 recorded review runs
-through the real critic/verification/escalation logic and prints
-precision/recall/F1 on the spot.
+Zero setup to try the PR-review side: no API key, no database, no infra.
+Clone it, install it, run `pr-review-agent eval`, and it replays 15
+recorded review runs through the real critic/verification/escalation logic
+and prints precision/recall/F1 on the spot.
 
 ```bash
 git clone https://github.com/Eshanya1/pr-review-agent.git
@@ -204,22 +208,150 @@ pr-review-agent review path/to/pr.diff --live
 Prints the verified findings and the escalation decision as JSON; exits
 non-zero if the PR was escalated, so it's usable as a CI gate.
 
+## RAG over the repo
+
+```bash
+pip install -e ".[rag]"          # only this needs the heavier deps (sentence-transformers)
+pr-review-agent rag index --path .
+pr-review-agent rag ask "how does the critic decide whether to escalate a finding?"
+```
+
+- **Chunking is AST-aware, not fixed-window** (`rag/chunking.py`): Python
+  files split at function/class boundaries via the `ast` module, so a chunk
+  never cuts a function in half. Markdown splits by heading. Commit history
+  is pulled from `git log`, one chunk per commit — questions like "what
+  changed in the eval harness" are answered from real history, not guesses.
+- **Embeddings are real and local** (`rag/embeddings.py`): `sentence-transformers`
+  (`all-MiniLM-L6-v2`), computed on your machine, zero per-call cost. This
+  is the one dependency worth gating behind an extra (`[rag]`) — it pulls in
+  torch, which the core PR-review path has no reason to carry.
+- **Vector store is embedded, not pgvector** (`rag/vectorstore.py`): brute-force
+  cosine similarity over an in-memory NumPy array, persisted to disk. At the
+  scale of one repo's chunks (hundreds, not millions) an ANN index would be
+  premature, and this needs no hosted database, no account, no native SQLite
+  extension to load (I tried `sqlite-vec` first — it needs SQLite's
+  extension-loading enabled, which this machine's Python build doesn't have;
+  rather than risk that being a "works on my laptop" trap again, NumPy won).
+  Swapping in pgvector for real scale means implementing the same
+  `build()`/`search()`/`save()`/`load()` interface against a server —
+  nothing else in the pipeline changes.
+- **Answers are grounded, not free-generated** (`rag/qa.py`): the model only
+  sees retrieved chunks, must cite its sources, and is instructed to say
+  "insufficient context" rather than guess. Structured output is validated
+  against a pydantic schema before it's trusted (same guardrail as PR review).
+
+### RAG eval results
+
+Retrieval scoring is free and fully offline — it only needs the local
+embedder, no API call:
+
+```
+$ pr-review-agent rag eval
+questions              10
+retrieval_hit_rate     0.9
+retrieval_mrr          0.658
+```
+
+9/10 questions retrieved a relevant chunk in the top 5. The one miss (a
+question about which env var enables live review) is a real retrieval gap,
+not cherry-picked.
+
+`--live` additionally generates real answers and has Claude judge whether
+each one is actually grounded in what was retrieved (hand-rolled
+LLM-as-judge rather than Ragas — same "own the metric" approach as the rest
+of this project's eval harness, and Ragas' default judges assume an
+OpenAI-shaped client anyway):
+
+```
+$ pr-review-agent rag eval --live
+faithfulness_rate      0.8
+faithfulness_n         10
+```
+
+Both misses are informative, not embarrassing:
+- One answer was **correct but not traceably grounded** — the model named
+  the right environment variable, but the judge couldn't find it in the
+  chunks that were actually retrieved (the same question that missed on
+  retrieval above). Right answer, wrong reason to trust it — exactly the
+  gap a faithfulness check exists to catch.
+- The **license question** lost a very short "## License\n\nMIT" chunk to
+  competing, longer chunks in the top-k ranking. A real, minor weakness of
+  short sections in section-based chunking, not a bug.
+
+## Guardrails
+
+- **Prompt-injection scanning** (`guardrails.py`) — a pattern-based tripwire
+  ("ignore previous instructions", "reveal your system prompt", etc.) run
+  against both diffs (PR review) and questions (RAG). It doesn't strip or
+  alter the flagged text — stripping on a false positive would silently
+  mutate legitimate content — it forces escalation / caps confidence
+  instead. Documented honestly as a heuristic: a determined attacker can
+  phrase around any fixed pattern list, so the system prompt also
+  explicitly tells the model to treat all diff/context content as data,
+  never instructions, as defense in depth.
+- **Structured output enforcement** — `Finding` and the RAG answer schema
+  are pydantic models, not trusted dicts. A malformed finding (bad enum
+  value, missing field) is dropped with a warning instead of crashing the
+  whole review or silently propagating garbage.
+- **Confidence-based escalation** — already the core of the PR-review
+  design (see "Why a critic pass" above); RAG reuses the same posture by
+  refusing to answer past a similarity threshold instead of guessing.
+
+## Observability
+
+```bash
+pr-review-agent stats
+```
+
+```
+=== Stats: 5 calls, 0 errors, ~$0.0289 total ===
+
+rag_ask      calls=   4 errors=  0 avg_latency=5992.4ms  ~$0.0264
+review       calls=   1 errors=  0 avg_latency=3680.4ms  ~$0.0025
+```
+
+Self-built (`observability.py`), not wired to LangSmith — every `review` and
+`rag ask` call is wrapped in a tracer that records latency and estimates
+cost from token usage, appending one JSON line to
+`~/.pr-review-agent/traces.jsonl`. No external account, no network call
+needed to see your own cost/latency history. Cost estimates use a small
+hardcoded per-model pricing table (`PRICING_PER_MILLION`), so treat them as
+directional, not a bill.
+
+## Scope
+
+Built as a focused slice, not an attempt at everything an "AI code
+intelligence platform" could be. Deliberately **not** included:
+fine-tuning an open-weight model on this repo's style (needs GPU compute
+this project didn't spend), and a deployed, always-on service (FastAPI +
+Docker + job queue) — both real, sizable pieces of work with real ongoing
+cost, left out on purpose rather than half-built.
+
 ## Project layout
 
 ```
 src/pr_review_agent/
-  diffparse.py   unified diff -> structured added lines
-  findings.py    Finding / ReviewResult data model
-  reviewer.py    LLM backend (live Anthropic) + cassette replay backend
-  critic.py      evidence verification + escalation policy
-  scoring.py     precision/recall/F1 + escalation accuracy
-  pipeline.py    wires reviewer -> critic -> result
-  cli.py         `pr-review-agent review` / `pr-review-agent eval`
-  eval_data/     packaged with the wheel (see pyproject.toml package-data) so
-    fixtures/<id>/{pr.diff, ground_truth.json}   eval works after a real `pip install`, not just an editable checkout
-    cassettes/<id>.json      recorded reviewer output for that fixture
+  diffparse.py       unified diff -> structured added lines
+  findings.py        Finding / ReviewResult pydantic models
+  reviewer.py        LLM backend (live Anthropic) + cassette replay backend
+  critic.py          evidence verification + escalation policy
+  scoring.py         precision/recall/F1 + escalation accuracy
+  pipeline.py        wires reviewer -> critic -> result
+  guardrails.py      prompt-injection scanning, shared by review + RAG
+  observability.py   self-built request tracer + cost estimation
+  cli.py             `review` / `eval` / `rag index|ask|eval` / `stats`
+  rag/
+    chunking.py      AST-aware Python chunks, section-aware markdown, git log
+    embeddings.py    local sentence-transformers embedder ([rag] extra)
+    vectorstore.py   NumPy brute-force cosine similarity, save/load
+    qa.py            retrieval + grounded answer + schema validation
+    eval_rag.py      retrieval hit-rate/MRR + LLM-judge faithfulness
+  eval_data/         packaged with the wheel (see pyproject.toml package-data) so
+    fixtures/<id>/{pr.diff, ground_truth.json}    eval works after a real `pip install`, not just an editable checkout
+    cassettes/<id>.json       recorded reviewer output for that fixture
+    rag_questions.json        hand-labeled question -> expected-source set
 scripts/generate_fixtures.py   single source of truth for all of the above
-tests/           pytest suite for the parser, critic, and scorer
+tests/             pytest suite: parser, critic, scorer, guardrails, chunking, vectorstore, observability
 ```
 
 ## License

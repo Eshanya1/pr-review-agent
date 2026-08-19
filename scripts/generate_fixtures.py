@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generates eval/fixtures/<id>/{pr.diff,ground_truth.json} and eval/cassettes/<id>.json.
+"""Generates eval_data/fixtures/<id>/{pr.diff,ground_truth.json} and eval_data/cassettes/<id>.json.
 
 Each fixture is authored as a small new file (a self-contained PR). Run this
 whenever you add or change a fixture in FIXTURES below -- it's the single

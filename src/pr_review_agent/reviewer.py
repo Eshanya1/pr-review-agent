@@ -2,10 +2,15 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Protocol
 
+from pydantic import ValidationError
+
 from .findings import Finding
+from .guardrails import UNTRUSTED_CONTENT_NOTICE
+from .observability import trace
 
 SYSTEM_PROMPT = """You are a senior application security and correctness reviewer.
 You will be given a unified diff of a pull request. Find real bugs the diff
@@ -45,7 +50,7 @@ class CassetteBackend:
 
     This is what powers the zero-setup demo (`pr-review-agent eval`, no flags):
     no API key, no network call, fully deterministic. Cassettes live in
-    eval/cassettes/<fixture_id>.json and were recorded from real review runs.
+    eval_data/cassettes/<fixture_id>.json and were recorded from real review runs.
     """
 
     def __init__(self, cassette_dir: Path):
@@ -61,7 +66,7 @@ class CassetteBackend:
         if not cassette_path.exists():
             raise FileNotFoundError(f"No cassette recorded for fixture '{fixture_id}' at {cassette_path}")
         data = json.loads(cassette_path.read_text())
-        return [Finding.from_dict(f) for f in data["findings"]]
+        return _validate_findings(data["findings"])
 
 
 class AnthropicBackend:
@@ -79,16 +84,36 @@ class AnthropicBackend:
         self.client = anthropic.Anthropic()
 
     def review(self, diff_text: str, fixture_id: str | None = None) -> list[Finding]:
-        message = self.client.messages.create(
-            model=self.model,
-            max_tokens=2048,
-            temperature=0,  # reviewer output should be reproducible, not creative
-            system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": f"Review this diff:\n\n{diff_text}"}],
-        )
+        with trace("review", model=self.model) as usage:
+            message = self.client.messages.create(
+                model=self.model,
+                max_tokens=2048,
+                temperature=0,  # reviewer output should be reproducible, not creative
+                system=SYSTEM_PROMPT,
+                messages=[{"role": "user", "content": UNTRUSTED_CONTENT_NOTICE + f"Review this diff:\n\n{diff_text}"}],
+            )
+            usage["input_tokens"] = message.usage.input_tokens
+            usage["output_tokens"] = message.usage.output_tokens
+
         text = "".join(block.text for block in message.content if hasattr(block, "text"))
         payload = _extract_json(text)
-        return [Finding.from_dict(f) for f in payload.get("findings", [])]
+        return _validate_findings(payload.get("findings", []))
+
+
+def _validate_findings(raw_findings: list[dict]) -> list[Finding]:
+    """Validates each raw finding against the Finding schema individually --
+    one malformed item (bad enum value, missing field, wrong type) is
+    dropped with a warning rather than crashing the whole review."""
+    findings = []
+    dropped = 0
+    for f in raw_findings:
+        try:
+            findings.append(Finding.from_dict(f))
+        except ValidationError:
+            dropped += 1
+    if dropped:
+        print(f"warning: dropped {dropped} finding(s) that failed schema validation", file=sys.stderr)
+    return findings
 
 
 def _extract_json(text: str) -> dict:

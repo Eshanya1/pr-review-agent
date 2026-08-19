@@ -11,3 +11,4 @@ htmlcov/
 .env
 *.report.json
 .DS_Store
+.rag_index/

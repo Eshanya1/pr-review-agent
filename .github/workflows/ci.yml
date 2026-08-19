@@ -42,3 +42,23 @@ jobs:
 
       - name: Run offline eval demo (no API key required)
         run: pr-review-agent eval
+
+  rag-offline-demo:
+    # Retrieval quality (hit-rate/MRR) needs only the local embedder, no
+    # API key -- this job proves that end to end on a fresh checkout.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install package with rag extra
+        run: pip install -e ".[dev,rag]"
+
+      - name: Index this repo
+        run: pr-review-agent rag index --path .
+
+      - name: Run offline retrieval eval (no API key required)
+        run: pr-review-agent rag eval

@@ -1,0 +1,42 @@
+[
+  {
+    "question": "How does the critic verify a finding's evidence against the diff?",
+    "expected_sources": ["src/pr_review_agent/critic.py"]
+  },
+  {
+    "question": "What happens when a finding has high severity but its evidence can't be verified?",
+    "expected_sources": ["src/pr_review_agent/critic.py"]
+  },
+  {
+    "question": "How is precision calculated in the eval harness?",
+    "expected_sources": ["src/pr_review_agent/scoring.py"]
+  },
+  {
+    "question": "What is the difference between the CassetteBackend and the AnthropicBackend?",
+    "expected_sources": ["src/pr_review_agent/reviewer.py"]
+  },
+  {
+    "question": "How are Python files split into chunks for the RAG index?",
+    "expected_sources": ["src/pr_review_agent/rag/chunking.py"]
+  },
+  {
+    "question": "How does the vector store find the most similar chunks to a query?",
+    "expected_sources": ["src/pr_review_agent/rag/vectorstore.py"]
+  },
+  {
+    "question": "Which environment variable has to be set to run a live review?",
+    "expected_sources": ["src/pr_review_agent/reviewer.py"]
+  },
+  {
+    "question": "How does the eval command decide whether a fixture counts as a PASS?",
+    "expected_sources": ["src/pr_review_agent/cli.py"]
+  },
+  {
+    "question": "What license is this project released under?",
+    "expected_sources": ["README.md"]
+  },
+  {
+    "question": "How are prompt injection attempts detected?",
+    "expected_sources": ["src/pr_review_agent/guardrails.py"]
+  }
+]

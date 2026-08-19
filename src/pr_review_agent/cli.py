@@ -102,5 +102,138 @@ def eval_cmd(live: bool, fixtures_dir: Path, cassette_dir: Path, json_report: Pa
         click.echo(f"\nWrote full report to {json_report}")
 
 
+@main.group()
+def rag():
+    """Index a repo and ask natural-language questions about it."""
+
+
+@rag.command(name="index")
+@click.option("--path", type=click.Path(exists=True, file_okay=False, path_type=Path), default=Path("."), show_default=True)
+@click.option("--index-dir", type=click.Path(path_type=Path), default=None, help="Defaults to <path>/.rag_index")
+def rag_index(path: Path, index_dir: Path | None):
+    """Chunk + embed a repo's code, docs, and commit history into a local vector store."""
+    from .rag.chunking import ingest_repo
+    from .rag.embeddings import LocalEmbedder
+    from .rag.vectorstore import VectorStore
+
+    index_dir = index_dir or (path / ".rag_index")
+    click.echo(f"Ingesting {path}...")
+    chunks = ingest_repo(path)
+    if not chunks:
+        raise click.ClickException(f"No indexable files found under {path}")
+    click.echo(f"{len(chunks)} chunks. Embedding locally (first run downloads a small model, ~90MB)...")
+    try:
+        embedder = LocalEmbedder()
+    except RuntimeError as exc:
+        raise click.ClickException(str(exc)) from exc
+    vectors = embedder.embed([c.text for c in chunks])
+
+    store = VectorStore()
+    store.build(chunks, vectors)
+    store.save(index_dir)
+    click.echo(f"Indexed {len(chunks)} chunks -> {index_dir}")
+
+
+@rag.command(name="ask")
+@click.argument("question")
+@click.option("--index-dir", type=click.Path(path_type=Path), default=Path(".rag_index"), show_default=True)
+@click.option("--k", default=5, show_default=True, help="Number of chunks to retrieve.")
+def rag_ask(question: str, index_dir: Path, k: int):
+    """Ask a natural-language question about an indexed repo. Calls the real Claude API."""
+    from .rag.embeddings import LocalEmbedder
+    from .rag.qa import answer_question
+    from .rag.vectorstore import VectorStore
+
+    if not VectorStore.exists(index_dir):
+        raise click.ClickException(f"No index found at {index_dir}. Run `pr-review-agent rag index` first.")
+
+    store = VectorStore.load(index_dir)
+    try:
+        embedder = LocalEmbedder()
+        result = answer_question(question, store, embedder, k=k)
+    except RuntimeError as exc:
+        raise click.ClickException(str(exc)) from exc
+    except Exception as exc:  # anthropic.APIError and friends
+        raise click.ClickException(f"Claude API call failed: {exc}") from exc
+
+    click.echo(json.dumps(result, indent=2))
+
+
+@rag.command(name="eval")
+@click.option("--index-dir", type=click.Path(path_type=Path), default=Path(".rag_index"), show_default=True)
+@click.option(
+    "--questions-file",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Defaults to the bundled eval_data/rag_questions.json",
+)
+@click.option("--live", is_flag=True, help="Also generate real answers and LLM-judge their faithfulness (calls Claude API).")
+@click.option("--k", default=5, show_default=True)
+def rag_eval_cmd(index_dir: Path, questions_file: Path | None, live: bool, k: int):
+    """Score retrieval quality (free, offline) and optionally answer faithfulness (--live).
+
+    Retrieval scoring only needs the local embedder -- hit-rate and MRR
+    against a hand-labeled question set cost nothing and need no API key.
+    --live additionally generates real answers and has Claude judge whether
+    each one is actually grounded in what was retrieved.
+    """
+    from .rag.embeddings import LocalEmbedder
+    from .rag.eval_rag import run_rag_eval
+    from .rag.vectorstore import VectorStore
+
+    if not VectorStore.exists(index_dir):
+        raise click.ClickException(f"No index found at {index_dir}. Run `pr-review-agent rag index` first.")
+
+    questions_file = questions_file or Path(str(_EVAL_DATA / "rag_questions.json"))
+    store = VectorStore.load(index_dir)
+    embedder = LocalEmbedder()
+
+    try:
+        report = run_rag_eval(questions_file, store, embedder, live=live, k=k)
+    except RuntimeError as exc:
+        raise click.ClickException(str(exc)) from exc
+    except Exception as exc:  # anthropic.APIError and friends
+        raise click.ClickException(f"Claude API call failed: {exc}") from exc
+
+    for o in report.retrieval:
+        status = "HIT" if o.hit else "MISS"
+        click.echo(f"[{status}] {o.question[:60]:60s} expected={o.expected_sources}")
+
+    if live:
+        click.echo("")
+        for f in report.faithfulness:
+            status = "FAITHFUL" if f["faithful"] else "UNFAITHFUL"
+            click.echo(f"[{status}] {f['question'][:60]:60s} {f['reason']}")
+
+    click.echo("")
+    click.echo("=== RAG Eval Summary ===")
+    for k_, v in report.summary().items():
+        click.echo(f"{k_:22s} {v}")
+
+
+@main.command()
+def stats():
+    """Summarize local observability traces from past review/rag-ask calls.
+
+    Self-built and local (~/.pr-review-agent/traces.jsonl) -- no external
+    account, no network call needed to see cost/latency history.
+    """
+    from .observability import TRACE_FILE, read_traces, summarize
+
+    records = read_traces()
+    if not records:
+        click.echo(f"No traces recorded yet at {TRACE_FILE}.")
+        return
+
+    summary = summarize(records)
+    click.echo(f"=== Stats: {summary['total_calls']} calls, {summary['total_errors']} errors, ~${summary['total_estimated_cost_usd']} total ===")
+    click.echo("")
+    for op, b in summary["by_operation"].items():
+        click.echo(
+            f"{op:12s} calls={b['calls']:4d} errors={b['errors']:3d} "
+            f"avg_latency={b['avg_latency_ms']:7.1f}ms  ~${b['total_cost_usd']}"
+        )
+
+
 if __name__ == "__main__":
     main()
