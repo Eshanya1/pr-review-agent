@@ -2,7 +2,7 @@
 
 ![demo: pr-review-agent eval running with zero setup](assets/demo.gif)
 
-**[Try it instantly →](https://claude.ai/code/artifact/f06698ab-3232-4422-9f2a-19f4dd5d715e)** — loads immediately, no build wait, replays the full eval client-side (cassette and live results, toggleable).
+**[Try it instantly →](https://claude.ai/code/artifact/32e24f30-8618-4f55-b5c2-ee391ef9d5a7)** — loads immediately, no build wait, replays the full eval client-side (cassette and live results, toggleable) plus real RAG Q&A exchanges over this repo.
 
 [![Launch in your browser](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/Eshanya1/pr-review-agent/main?urlpath=terminals/1)
 — for the real CLI in a real terminal instead: no install, opens a real terminal with the tool already set up. Run `pr-review-agent eval` once it loads (takes ~1-2 min to build the first time).
@@ -209,6 +209,8 @@ Prints the verified findings and the escalation decision as JSON; exits
 non-zero if the PR was escalated, so it's usable as a CI gate.
 
 ## RAG over the repo
+
+![demo: pr-review-agent rag ask running against this repo's own index](assets/demo-rag.gif)
 
 ```bash
 pip install -e ".[rag]"          # only this needs the heavier deps (sentence-transformers)
