@@ -27,9 +27,11 @@ def review(diff_file: Path, live: bool):
     if live:
         try:
             backend = build_backend(live=True)
+            result = run_review(diff_text, backend)
         except RuntimeError as exc:
             raise click.ClickException(str(exc)) from exc
-        result = run_review(diff_text, backend)
+        except Exception as exc:  # anthropic.APIError and friends
+            raise click.ClickException(f"Claude API call failed: {exc}") from exc
     else:
         raise click.ClickException(
             "Reviewing an arbitrary diff requires --live and ANTHROPIC_API_KEY "
@@ -53,7 +55,10 @@ def eval_cmd(live: bool, fixtures_dir: Path, cassette_dir: Path, json_report: Pa
     replays recorded reviewer outputs (cassettes) against each fixture diff
     and re-runs the real critic/verification/escalation logic on top.
     """
-    backend = build_backend(live=live, cassette_dir=cassette_dir)
+    try:
+        backend = build_backend(live=live, cassette_dir=cassette_dir)
+    except RuntimeError as exc:
+        raise click.ClickException(str(exc)) from exc
     fixture_dirs = sorted(p for p in fixtures_dir.iterdir() if p.is_dir())
     if not fixture_dirs:
         raise click.ClickException(f"No fixtures found in {fixtures_dir}")
@@ -64,7 +69,10 @@ def eval_cmd(live: bool, fixtures_dir: Path, cassette_dir: Path, json_report: Pa
         diff_text = (fdir / "pr.diff").read_text()
         ground_truth = json.loads((fdir / "ground_truth.json").read_text())
 
-        result = run_review(diff_text, backend, fixture_id=fixture_id)
+        try:
+            result = run_review(diff_text, backend, fixture_id=fixture_id)
+        except Exception as exc:  # anthropic.APIError and friends
+            raise click.ClickException(f"Claude API call failed on fixture '{fixture_id}': {exc}") from exc
         outcome = score_fixture(
             fixture_id=fixture_id,
             is_clean=ground_truth["clean"],
