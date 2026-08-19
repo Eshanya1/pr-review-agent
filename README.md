@@ -1,5 +1,7 @@
 # pr-review-agent
 
+![demo: pr-review-agent eval running with zero setup](assets/demo.gif)
+
 A multi-agent system that reviews pull request diffs for security and
 correctness bugs — with a **critic pass** that cross-checks every claim
 against the actual diff before deciding whether a human needs to look at it.
