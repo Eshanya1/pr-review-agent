@@ -2,8 +2,10 @@
 
 ![demo: pr-review-agent eval running with zero setup](assets/demo.gif)
 
+**[Try it instantly →](https://claude.ai/code/artifact/f06698ab-3232-4422-9f2a-19f4dd5d715e)** — loads immediately, no build wait, replays the full eval client-side (cassette and live results, toggleable).
+
 [![Launch in your browser](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/Eshanya1/pr-review-agent/main?urlpath=terminal)
-— no install, opens a real terminal with the tool already set up. Run `pr-review-agent eval` once it loads (takes ~1-2 min to build the first time).
+— for the real CLI in a real terminal instead: no install, opens a real terminal with the tool already set up. Run `pr-review-agent eval` once it loads (takes ~1-2 min to build the first time).
 
 A multi-agent system that reviews pull request diffs for security and
 correctness bugs — with a **critic pass** that cross-checks every claim
