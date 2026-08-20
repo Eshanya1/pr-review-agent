@@ -2,7 +2,7 @@
 
 ![demo: pr-review-agent eval running with zero setup](assets/demo.gif)
 
-**[Try it instantly →](https://claude.ai/code/artifact/32e24f30-8618-4f55-b5c2-ee391ef9d5a7)** — loads immediately, no build wait, replays the full eval client-side (cassette and live results, toggleable) plus real RAG Q&A exchanges over this repo.
+**[Try it instantly →](https://eshanya1.github.io/pr-review-agent/)** — loads immediately, no build wait, replays all 15 real eval fixtures client-side with the actual diff, findings, and verifier decision from both the cassette and a validated live run (88.0% F1, reproduced identically 3 times).
 
 [![Launch in your browser](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/Eshanya1/pr-review-agent/main?urlpath=terminals/1)
 — for the real CLI in a real terminal instead: no install, opens a real terminal with the tool already set up. Run `pr-review-agent eval` once it loads (takes ~1-2 min to build the first time).
@@ -124,49 +124,55 @@ $ pr-review-agent eval --live
 fixtures             15
 true_positives       11
 false_negatives      0
-false_positives      2
-precision            0.846
+false_positives      3
+precision            0.786
 recall               1.0
-f1                   0.917
+f1                   0.880
 escalation_accuracy  1.0
 auto_approve_rate    0.467
 ```
 
-The live model actually outperforms the recorded cassette above — it caught
+Reproduced identically across 3 independent live runs — same 88.0% F1 every
+time, despite `temperature=0` not guaranteeing bit-exact determinism on the
+provider side. (An earlier single run of this same code recorded 91.7% F1;
+that number doesn't reproduce anymore and has been retired in favor of this
+validated one — see the [interactive demo](https://eshanya1.github.io/pr-review-agent/)
+for the real diff/finding on every fixture.)
+
+The live model still outperforms the recorded cassette on recall — it catches
 both bugs (`off_by_one_loop`, `session_expiry`'s exact evidence) that the
-hand-authored cassette was scripted to miss. That's expected: the cassette
-exists for reproducibility, not to flatter the system.
+hand-authored cassette is scripted to miss — but costs precision with three
+low-severity false positives, one of which (`clean_pagination_fix`) is the
+same confidently-wrong judgment call the cassette section above documents.
+That's expected: the cassette exists for reproducibility, not to flatter the
+system.
 
-The 2 false positives here are the more interesting result, and both are
-genuine, not fabricated for the demo:
+The 3 false positives here are the more interesting result, and all are
+genuine, not fabricated for the demo — see them with full diffs on the
+[interactive demo](https://eshanya1.github.io/pr-review-agent/):
 
-- **`clean_formatting_helpers`** flagged `dollars = cents / 100` as
-  "integer division that truncates cents" — which is simply wrong in
-  Python 3 (`/` is float division; that's what `//` is for). A confident,
-  well-quoted, factually incorrect claim about language semantics — exactly
-  the class of error the critic *can't* catch, because the evidence is real
-  and verifiable, only the reasoning about it is wrong.
-- **`clean_pagination_fix`** got flagged again, this time for
-  `start = page * page_size` being "off-by-one if page is 1-indexed" —
-  speculative, and wrong for the code as written (0-indexed pages are
-  standard), but not an unreasonable thing to ask a human to double-check.
+- **`clean_pagination_fix`** flagged `start = page * page_size` as
+  "off-by-one if page is 1-indexed" — speculative, and wrong for the code
+  as written (0-indexed pages are standard), but not an unreasonable thing
+  to ask a human to double-check. This one recurs across runs.
+- **`clean_formatting_helpers`** flagged the already-fixed `truncate()`
+  helper (`text[:max_len - 3] + "..."`) for still overflowing at very small
+  `max_len` values — technically a real residual edge case for `max_len < 3`,
+  though not one the fixture's own test suite exercises or the ground truth
+  counts as a bug. Arguably a defensible flag, not a hallucination.
+- **`clean_formatting_tests`** second-guessed the test file itself
+  (`assert len(result) == 10`), reasoning the assertion should account for
+  the ellipsis characters — a plausible-sounding but incorrect read of the
+  test's actual assumptions.
 
-**One fixture actually caught a real bug in the eval set itself.** The
-first live run (before `temperature=0` was pinned) flagged
-`clean_formatting_helpers`'s original `truncate()` implementation —
-`text[:max_len - 1] + "..."` — for producing strings *longer* than
-`max_len` (`(max_len-1)+3 = max_len+2`). That fixture was supposed to be
-clean; it wasn't. The bug is fixed in `scripts/generate_fixtures.py` now
-(`max_len - 3` instead of `max_len - 1`). Left as a note here rather than
-memory-holed, because it's a fair example of the kind of mistake this tool
-is meant to catch — including, apparently, in its own test data.
-
-Also worth being upfront about: live runs are **not perfectly
-reproducible** run-to-run even at `temperature=0` (API-level nondeterminism
-across requests is a known Claude/GPT behavior). Two consecutive runs above
-landed on identical numbers, but don't expect bit-for-bit identical findings
-every time — which is exactly why the cassette-based eval, not the live
-one, is what CI checks on every push.
+**Live runs are not perfectly reproducible run-to-run**, even at
+`temperature=0` (API-level nondeterminism across requests is documented
+Claude/GPT behavior) — but the aggregate metrics above were identical across
+3 independent runs, which is why they're reported as the current validated
+baseline rather than a single lucky number. The specific false positives can
+still vary run to run even when the F1 score doesn't; that variance is
+exactly why the cassette-based eval, not the live one, is what CI checks on
+every push.
 
 ## Bug classes covered by the eval set
 
